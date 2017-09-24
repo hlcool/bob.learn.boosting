@@ -1,0 +1,73 @@
+{% set name = 'bob.learn.boosting' %}
+
+package:
+  name: {{ name }}
+  version: {{ environ.get('BOB_PACKAGE_VERSION', '0.0.1') }}
+
+build:
+  entry_points:
+    - boosting_example.py = bob.learn.boosting.examples.mnist:main
+  number: {{ environ.get('BOB_BUILD_NUMBER', 0) }}
+  script:
+    - cd {{ environ.get('CI_PROJECT_DIR', environ.get('RECIPE_DIR') + '/..') }}
+    {% if environ.get('BUILD_EGG') %}
+    - python setup.py sdist --formats=zip
+    {% endif %}
+    - pip install .
+    - sphinx-build -W doc $PREFIX/docs/{{ name }}
+  script_env:
+   - BOB_DOCUMENTATION_SERVER
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - toolchain {{ toolchain }}
+    - sphinx
+    - sphinx_rtd_theme
+    - scipy
+    - bob.extension
+    - bob.blitz
+    - bob.core
+    - bob.io.base
+    - libblitz {{ libblitz }}
+    - boost {{ boost }}
+    - numpy {{ numpy }}
+    - cmake
+    - pkg-config
+    - gcc {{ gcc }}  # [linux]
+    - libgcc {{ libgcc }}  # [linux]
+  run:
+    - python
+    - setuptools
+    - scipy
+    - bob.extension
+    - bob.blitz
+    - bob.core
+    - bob.io.base
+    - libblitz
+    - boost
+    - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
+    - libgcc  # [linux]
+
+test:
+  imports:
+    - {{ name }}
+  commands:
+    - boosting_example.py --help
+    - nosetests --with-coverage --cover-package={{ name }} -sv {{ name }}
+    # The doctests will run only if "CI_PROJECT_DIR" is available as an
+    # environment variable. If you are testing locally, you can set it to the
+    # root of your project.
+    - sphinx-build -b doctest {{ environ.get('CI_PROJECT_DIR') }}/doc sphinx
+  requires:
+    - nose
+    - coverage
+    - sphinx
+    - sphinx_rtd_theme
+
+about:
+  home: https://www.idiap.ch/software/bob/
+  license: BSD 3-Clause
+  summary: Boosting framework for Bob
+  license_family: BSD
